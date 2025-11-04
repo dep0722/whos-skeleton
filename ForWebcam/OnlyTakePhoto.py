@@ -7,14 +7,14 @@ from datetime import datetime
 import cv2
 
 # === 設定 ===
-INTERVAL = 0.5   # 每張照片間隔秒數
-DURATION = 121    # 拍攝總時長（秒）
+INTERVAL = 0.1   # 每張照片間隔秒數
+DURATION = 60  # 拍攝總時長（秒）
 # === 輸出設定 ===
 BASE_OUTPUT_DIR = "outputs"
 timestamp_run = datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_FOLDER = os.path.join(BASE_OUTPUT_DIR, timestamp_run)
 #下面記得改檔案資料夾路徑
-IMAGE_FOLDER = os.path.join(RUN_FOLDER, "C:/mydata/sf/conda/1025_test/p/A")
+IMAGE_FOLDER = os.path.join(RUN_FOLDER, "C:/mydata/sf/conda/1025_test/p2/F")
 
 # 建立資料夾
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
@@ -22,7 +22,7 @@ os.makedirs(IMAGE_FOLDER, exist_ok=True)
 def main():
     # 攝影機設定
     cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    #cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
     if not cap.isOpened():
         raise RuntimeError('無法開啟攝影機')
@@ -39,7 +39,7 @@ def main():
 
             ret, frame = cap.read()
             #順轉90:cv2.ROTATE_90_CLOCKWISE，逆90:cv2.ROTATE_90_COUNTERCLOCKWISE，180:cv2.ROTATE_180
-            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+            #frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             if not ret:
                 print('無法讀取影格，結束')
                 break

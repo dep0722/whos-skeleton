@@ -30,8 +30,7 @@ LM = {
     'LEFT_HIP': 23, 'RIGHT_HIP': 24,
     'LEFT_KNEE': 25, 'RIGHT_KNEE': 26,
     'LEFT_ANKLE': 27, 'RIGHT_ANKLE': 28,
-    'LEFT_HEEL': 29, 'RIGHT_HEEL': 30,
-    'LEFT_FOOT_INDEX': 31, 'RIGHT_FOOT_INDEX': 32,
+    'LEFT_HEEL': 29, 'RIGHT_HEEL': 30
 }
 
 PAIRS = [
@@ -46,9 +45,7 @@ PAIRS = [
     ('LEFT_HIP', 'LEFT_KNEE'),
     ('LEFT_KNEE', 'LEFT_ANKLE'),
     ('RIGHT_HIP', 'RIGHT_KNEE'),
-    ('RIGHT_KNEE', 'RIGHT_ANKLE'),
-    ('LEFT_HEEL', 'LEFT_FOOT_INDEX'),
-    ('RIGHT_HEEL', 'RIGHT_FOOT_INDEX'),
+    ('RIGHT_KNEE', 'RIGHT_ANKLE')
 ]
 
 HEADER = [f"{a}_{b}" for a, b in PAIRS] + ["label", "filename"]

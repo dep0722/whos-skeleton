@@ -14,9 +14,7 @@ PAIRS = [
     ('LEFT_HIP', 'LEFT_KNEE'),
     ('LEFT_KNEE', 'LEFT_ANKLE'),
     ('RIGHT_HIP', 'RIGHT_KNEE'),
-    ('RIGHT_KNEE', 'RIGHT_ANKLE'),
-    ('LEFT_HEEL', 'LEFT_FOOT_INDEX'),
-    ('RIGHT_HEEL', 'RIGHT_FOOT_INDEX'),
+    ('RIGHT_KNEE', 'RIGHT_ANKLE')
 ]
 
 # === 初始化 MediaPipe Pose ===
@@ -33,7 +31,7 @@ mp_pose_connections = mp_pose.PoseLandmark
 
 # === 開啟攝影機 ===
 cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+# cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
 if not cap.isOpened():
     print("❌ 無法開啟攝影機")
