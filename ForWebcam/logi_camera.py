@@ -4,7 +4,7 @@
 import cv2
 
 # === 開啟攝影機 ===
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # 攝影機索引值 (0/1)，依電腦而定
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # 攝影機索引值 (0/1)，依電腦而定
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))  # 設定MJPG格式
 
 
@@ -18,7 +18,7 @@ print("✅ 攝影機已開啟，按下 Q 結束")
 while True:
     ret, frame = cap.read()
     #順轉90:cv2.ROTATE_90_CLOCKWISE，逆90:cv2.ROTATE_90_COUNTERCLOCKWISE，180:cv2.ROTATE_180
-    frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+    # frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
     if not ret:
         print("⚠️ 無法讀取畫面")
         break
