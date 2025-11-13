@@ -1,6 +1,6 @@
 '''
-讀取資料夾中照片並匯出關節座標CSV
-每個子資料夾代表一個類別
+讀取資料夾中所有子資料夾的照片並匯出關節座標CSV
+每個子資料夾名稱代表一個類別（label）
 使用 Mediapipe Pose 原始座標輸出
 '''
 import os
@@ -11,7 +11,7 @@ import mediapipe as mp
 
 # === 設定 ===
 BASE_IMAGE_DIR = "C:/mydata/sf/conda/1025_test/p1105test"
-CSV_PATH = "C:/mydata/sf/conda/1025_test/test_csv/1112_p1105test.csv"
+CSV_PATH = "C:/mydata/sf/conda/1025_test/test_csv/1113_p1105test.csv"
 
 JOINTS = [
     "NOSE", "LEFT_EYE", "RIGHT_EYE", "LEFT_EAR", "RIGHT_EAR",
@@ -21,7 +21,7 @@ JOINTS = [
     "LEFT_HEEL", "RIGHT_HEEL", "LEFT_FOOT_INDEX", "RIGHT_FOOT_INDEX"
 ]
 
-# Mediapipe 初始化
+# === Mediapipe 初始化 ===
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5)
 
@@ -63,16 +63,19 @@ def main():
         writer.writerow(headers)
 
         ix = 0
-        for label in os.listdir(BASE_IMAGE_DIR):
-            folder_path = os.path.join(BASE_IMAGE_DIR, label)
-            if not os.path.isdir(folder_path):
+        # 🔁 遞迴讀取所有子資料夾與檔案
+        for root, dirs, files in os.walk(BASE_IMAGE_DIR):
+            # 用子資料夾名稱當作 label（相對路徑最後一層）
+            label = os.path.basename(root)
+            # 如果在最上層（例如 BASE_IMAGE_DIR 本身），略過
+            if root == BASE_IMAGE_DIR:
                 continue
 
-            for filename in os.listdir(folder_path):
+            for filename in files:
                 if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
                     continue
 
-                filepath = os.path.join(folder_path, filename)
+                filepath = os.path.join(root, filename)
                 ix += 1
                 print(f"[{ix}] 處理 -> {filepath} (label={label})")
 
