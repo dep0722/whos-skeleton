@@ -30,7 +30,7 @@ mp_drawing = mp.solutions.drawing_utils
 mp_pose_connections = mp_pose.PoseLandmark
 
 # === 開啟攝影機 ===
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
 if not cap.isOpened():

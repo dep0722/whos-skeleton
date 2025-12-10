@@ -7,7 +7,7 @@ mp_drawing = mp.solutions.drawing_utils
 pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 # 輸入影片檔案
-video_path = "C:/Users/User/Pictures/Camera Roll/WIN_20251207_17_07_12_Pro.mp4"
+video_path = "C:/Users/User/Pictures/Camera Roll/WIN_20251208_19_25_23_Pro.mp4"
 cap = cv2.VideoCapture(video_path)
 
 # 影片資訊
@@ -16,7 +16,7 @@ height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps = cap.get(cv2.CAP_PROP_FPS)
 
 # 指定輸出影片名稱
-output_path = "C:/mydata/sf/conda/1025_test/output_video/120703.mp4"
+output_path = "C:/mydata/sf/conda/1025_test/output_video/1208.mp4"
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # mp4
 out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 

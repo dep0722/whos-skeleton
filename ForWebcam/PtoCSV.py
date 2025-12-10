@@ -78,7 +78,7 @@ def process_image(args):
 # --- 讀取所有子資料夾圖片並平行處理 ---
 def read_images_and_extract_features_parallel():
     subfolders = [f for f in os.listdir(BASE_DIR)
-                  if os.path.isdir(os.path.join(BASE_DIR, f))]
+                    if os.path.isdir(os.path.join(BASE_DIR, f))]
     subfolders.sort()
 
     all_images = []

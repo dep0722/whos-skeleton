@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import mediapipe as mp  # pip install mediapipe opencv-python pandas numpy
 
-BASE_DIR = r"C:/mydata/sf/conda/1025_test/p2"
+BASE_DIR = r"C:/mydata/sf/conda/1025_test/p_ctest"
 
 # === Mediapipe Pose 初始化 ===
 mp_pose = mp.solutions.pose
@@ -104,7 +104,7 @@ def read_images_and_extract_features():
 
 if __name__ == "__main__":
     df = read_images_and_extract_features()
-    output_path = r"C:/mydata/sf/conda/1025_test/test_csv/pose_1104.csv"
+    output_path = r"C:/mydata/sf/conda/1025_test/test_csv/pose_1119_2test.csv"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False, encoding="utf-8-sig")
     print(f"已輸出 CSV:{output_path}")
