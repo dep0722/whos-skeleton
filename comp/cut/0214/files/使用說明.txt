@@ -1,0 +1,493 @@
+"""
+========================================================================
+姿態序列自動切割 - 深度學習模型使用指南
+========================================================================
+
+## 📋 目錄
+1. 快速開始
+2. 模型架構說明
+3. 如何使用你的切好片段進行訓練
+4. 模型改進建議
+5. 完整程式碼
+
+========================================================================
+## 1. 快速開始
+========================================================================
+
+### 環境需求:
+```bash
+pip install tensorflow pandas numpy matplotlib scikit-learn
+```
+
+### 基本使用:
+```python
+python sequence_labeling_tf.py
+```
+
+========================================================================
+## 2. 模型架構說明
+========================================================================
+
+### BIO 標註方案:
+- B (Begin): 片段起始幀
+- I (Inside): 片段內部幀
+- O (Outside): 片段外部幀
+
+### 模型結構:
+```
+輸入層 (12維特徵)
+    ↓
+雙向LSTM層 (128單元)
+    ↓
+Dropout (0.3)
+    ↓
+雙向LSTM層 (64單元)
+    ↓
+Dropout (0.3)
+    ↓
+TimeDistributed Dense (3類別)
+    ↓
+Softmax輸出
+```
+
+### 特徵設計:
+1. **基礎特徵** (4維):
+   - LAnkle_x, LAnkle_y
+   - RAnkle_x, RAnkle_y
+
+2. **速度特徵** (4維):
+   - 每個座標的一階差分
+
+3. **加速度特徵** (4維):
+   - 速度的一階差分
+
+總計: 12維特徵向量
+
+========================================================================
+## 3. 如何使用你的切好片段進行訓練
+========================================================================
+
+### 步驟 1: 準備資料
+
+你的資料結構:
+```
+C:\mydata\sf\open\output_csv\0128\A\0128_A_3.csv  (原始完整CSV)
+C:\mydata\sf\open\output_csv\0128cut\A\A_3\      (切好的片段)
+    ├── L_1_k.csv
+    ├── L_2_a.csv
+    ├── R_1_b.csv
+    └── ...
+```
+
+### 步驟 2: 生成訓練標籤
+
+程式會自動:
+1. 讀取原始CSV
+2. 讀取所有切好的片段
+3. 根據片段的幀範圍生成BIO標籤
+4. 訓練模型學習這些標籤
+
+### 步驟 3: 修改配置
+
+在程式中修改路徑:
+```python
+class Config:
+    # 你的資料路徑
+    ORIGINAL_CSV = r"C:\mydata\sf\open\output_csv\0128\A\0128_A_3.csv"
+    SEGMENTS_DIR = r"C:\mydata\sf\open\output_csv\0128cut\A\A_3"
+    
+    # 模型參數可調整
+    HIDDEN_SIZE = 128      # LSTM隱藏層大小
+    NUM_EPOCHS = 50        # 訓練輪數
+    DROPOUT = 0.3          # Dropout率
+```
+
+========================================================================
+## 4. 模型改進建議
+========================================================================
+
+### 方案 A: 多人資料混合訓練
+如果你有多個人的資料 (A_3, H_2 等):
+
+```python
+# 修改資料載入部分
+DATASETS = [
+    ("C:\\...\\0128_A_3.csv", "C:\\...\\A_3"),
+    ("C:\\...\\0128_H_2.csv", "C:\\...\\H_2"),
+    # 添加更多資料集
+]
+
+# 合併所有資料進行訓練
+all_features = []
+all_labels = []
+
+for csv_path, seg_dir in DATASETS:
+    features, labels = load_and_process(csv_path, seg_dir)
+    all_features.append(features)
+    all_labels.append(labels)
+
+# 訓練
+model.fit(all_features, all_labels)
+```
+
+### 方案 B: 增加更多特徵
+
+```python
+# 在 extract_features() 中添加:
+
+# 1. 關節角度
+def compute_joint_angles(df):
+    # 膝蓋角度 = arccos((hip-knee · knee-ankle) / (||hip-knee|| * ||knee-ankle||))
+    pass
+
+# 2. 步幅特徵
+def compute_stride_features(df):
+    # 左右腳距離
+    left_right_dist = np.sqrt(
+        (df['LAnkle_x'] - df['RAnkle_x'])**2 + 
+        (df['LAnkle_y'] - df['RAnkle_y'])**2
+    )
+    return left_right_dist
+
+# 3. 時序特徵
+def add_temporal_context(features, window=5):
+    # 添加過去N幀的平均值
+    pass
+```
+
+### 方案 C: 使用更強的模型架構
+
+```python
+# Temporal Convolutional Network (TCN)
+from tensorflow.keras.layers import Conv1D, BatchNormalization
+
+def build_tcn_model(input_shape, num_classes):
+    model = models.Sequential([
+        Conv1D(64, kernel_size=3, padding='same', activation='relu'),
+        BatchNormalization(),
+        Conv1D(128, kernel_size=3, padding='same', activation='relu'),
+        BatchNormalization(),
+        Conv1D(num_classes, kernel_size=1, activation='softmax')
+    ])
+    return model
+
+# Transformer
+from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization
+
+def build_transformer_model(input_shape, num_classes):
+    inputs = keras.Input(shape=input_shape)
+    x = MultiHeadAttention(num_heads=4, key_dim=32)(inputs, inputs)
+    x = LayerNormalization()(x)
+    outputs = layers.Dense(num_classes, activation='softmax')(x)
+    return keras.Model(inputs, outputs)
+```
+
+### 方案 D: 後處理優化
+
+```python
+def post_process_predictions(pred_labels):
+    \"\"\"
+    後處理規則:
+    1. 連續的B要合併(只保留第一個)
+    2. 孤立的B轉為I或O
+    3. 短於N幀的片段移除
+    \"\"\"
+    processed = pred_labels.copy()
+    
+    # 1. 合併連續B
+    for i in range(1, len(processed)):
+        if processed[i] == 1 and processed[i-1] == 1:  # B
+            processed[i] = 2  # 改為I
+    
+    # 2. 移除孤立B
+    for i in range(1, len(processed)-1):
+        if processed[i] == 1:  # B
+            if processed[i-1] == 0 and processed[i+1] == 0:  # 前後都是O
+                processed[i] = 0
+    
+    # 3. 最小長度過濾
+    MIN_SEGMENT_LEN = 10
+    # ... (實作片段長度過濾)
+    
+    return processed
+```
+
+========================================================================
+## 5. 進階功能: 從片段CSV讀取真實標籤
+========================================================================
+
+這是最重要的部分 - 如何讀取你已經手工標註好的片段!
+
+```python
+def load_segments_and_generate_labels(original_csv, segments_dir):
+    \"\"\"
+    從切好的片段CSV生成訓練標籤
+    \"\"\"
+    import glob
+    from pathlib import Path
+    
+    # 讀取原始CSV
+    df_original = pd.read_csv(original_csv)
+    n_frames = len(df_original)
+    
+    # 初始化標籤為O (Outside)
+    labels = np.zeros(n_frames, dtype=int)  # 0=O, 1=B, 2=I
+    
+    # 讀取所有片段CSV
+    segment_files = glob.glob(os.path.join(segments_dir, "*.csv"))
+    
+    segments_info = []
+    
+    for seg_file in sorted(segment_files):
+        # 讀取片段
+        df_seg = pd.read_csv(seg_file)
+        seg_name = Path(seg_file).stem
+        
+        # 方法1: 如果片段CSV中有原始frame_index
+        if 'frame_index' in df_seg.columns and 'original_frame' in df_seg.columns:
+            # 使用original_frame欄位
+            start_frame = df_seg['original_frame'].iloc[0]
+            end_frame = df_seg['original_frame'].iloc[-1] + 1
+        
+        # 方法2: 通過匹配特徵值反推原始幀位置
+        else:
+            # 使用第一幀的特徵值在原始CSV中搜尋
+            first_row_features = df_seg.iloc[0]
+            
+            # 匹配鼻子座標 (通常最穩定)
+            nose_x = first_row_features['Nose_x']
+            nose_y = first_row_features['Nose_y']
+            
+            # 在原始CSV中找最接近的幀
+            distances = np.sqrt(
+                (df_original['Nose_x'] - nose_x)**2 + 
+                (df_original['Nose_y'] - nose_y)**2
+            )
+            start_frame = np.argmin(distances)
+            end_frame = start_frame + len(df_seg)
+        
+        # 標註這個片段
+        if start_frame < n_frames and end_frame <= n_frames:
+            labels[start_frame] = 1  # B (Begin)
+            labels[start_frame+1:end_frame] = 2  # I (Inside)
+            
+            segments_info.append({
+                'name': seg_name,
+                'start': start_frame,
+                'end': end_frame,
+                'length': end_frame - start_frame
+            })
+    
+    print(f"✓ 從 {len(segments_info)} 個片段生成標籤")
+    for seg in segments_info[:5]:  # 顯示前5個
+        print(f"  - {seg['name']:20s} | Frames {seg['start']:4d}-{seg['end']:4d}")
+    
+    return labels, segments_info
+
+
+# 使用範例:
+labels, segments = load_segments_and_generate_labels(
+    "C:\\...\\0128_A_3.csv",
+    "C:\\...\\A_3"
+)
+```
+
+========================================================================
+## 6. 完整訓練流程範例
+========================================================================
+
+```python
+# 完整的訓練腳本
+def train_segmentation_model():
+    # 1. 載入多個資料集
+    datasets = [
+        ("path/to/A_3.csv", "path/to/A_3_segments"),
+        ("path/to/H_2.csv", "path/to/H_2_segments"),
+    ]
+    
+    all_X = []
+    all_y = []
+    
+    for csv_path, seg_dir in datasets:
+        # 讀取原始資料
+        df = pd.read_csv(csv_path)
+        
+        # 從片段生成標籤
+        labels, _ = load_segments_and_generate_labels(csv_path, seg_dir)
+        
+        # 提取特徵
+        features, _ = extract_features(df)
+        
+        # 標準化
+        scaler = StandardScaler()
+        features = scaler.fit_transform(features)
+        
+        all_X.append(features)
+        all_y.append(labels)
+    
+    # 2. 合併資料
+    X_train = np.vstack(all_X)
+    y_train = np.concatenate(all_y)
+    
+    # 3. 建立模型
+    model = build_model(
+        input_shape=(None, X_train.shape[1]),
+        num_classes=3
+    )
+    
+    # 4. 訓練
+    history = model.fit(
+        X_train.reshape(1, -1, X_train.shape[1]),
+        y_train.reshape(1, -1),
+        epochs=50,
+        verbose=1
+    )
+    
+    # 5. 儲存模型
+    model.save('segmentation_model.h5')
+    
+    return model, history
+
+# 執行訓練
+model, history = train_segmentation_model()
+```
+
+========================================================================
+## 7. 使用訓練好的模型進行預測
+========================================================================
+
+```python
+def predict_segments(model, csv_path, output_dir):
+    \"\"\"使用訓練好的模型預測新資料的切割點\"\"\"
+    
+    # 1. 讀取資料
+    df = pd.read_csv(csv_path)
+    
+    # 2. 提取特徵
+    features, _ = extract_features(df)
+    
+    # 3. 標準化
+    scaler = StandardScaler()
+    features = scaler.fit_transform(features)
+    
+    # 4. 預測
+    X = features.reshape(1, -1, features.shape[1])
+    predictions = model.predict(X)
+    pred_labels = np.argmax(predictions[0], axis=-1)
+    
+    # 5. 從預測中提取片段
+    segments = extract_segments_from_predictions(pred_labels)
+    
+    # 6. 輸出片段CSV
+    os.makedirs(output_dir, exist_ok=True)
+    
+    for i, seg in enumerate(segments):
+        start, end = seg['start'], seg['end']
+        seg_df = df.iloc[start:end].copy()
+        seg_df['frame_index'] = range(len(seg_df))
+        
+        output_path = os.path.join(output_dir, f"predicted_{i+1}.csv")
+        seg_df.to_csv(output_path, index=False)
+    
+    print(f"✓ 預測完成,輸出 {len(segments)} 個片段到 {output_dir}")
+    
+    return segments
+
+
+def extract_segments_from_predictions(pred_labels):
+    \"\"\"從BIO標籤中提取片段範圍\"\"\"
+    segments = []
+    in_segment = False
+    start = None
+    
+    for i, label in enumerate(pred_labels):
+        if label == 1:  # B (Begin)
+            if in_segment:
+                # 結束前一個片段
+                segments.append({'start': start, 'end': i})
+            # 開始新片段
+            start = i
+            in_segment = True
+        elif label == 0:  # O (Outside)
+            if in_segment:
+                # 結束片段
+                segments.append({'start': start, 'end': i})
+                in_segment = False
+        # label == 2 (I) 繼續當前片段
+    
+    # 處理最後一個片段
+    if in_segment:
+        segments.append({'start': start, 'end': len(pred_labels)})
+    
+    return segments
+
+# 使用範例:
+model = keras.models.load_model('segmentation_model.h5')
+segments = predict_segments(model, 'new_data.csv', 'output_segments/')
+```
+
+========================================================================
+## 8. 效能評估指標
+========================================================================
+
+```python
+def evaluate_segmentation_quality(true_segments, pred_segments):
+    \"\"\"
+    評估切割品質
+    
+    指標:
+    1. IoU (Intersection over Union)
+    2. 片段數量匹配度
+    3. 平均邊界誤差
+    \"\"\"
+    
+    # 計算IoU
+    ious = []
+    for true_seg in true_segments:
+        best_iou = 0
+        for pred_seg in pred_segments:
+            iou = compute_iou(true_seg, pred_seg)
+            best_iou = max(best_iou, iou)
+        ious.append(best_iou)
+    
+    avg_iou = np.mean(ious)
+    
+    print(f"平均 IoU: {avg_iou:.3f}")
+    print(f"真實片段數: {len(true_segments)}")
+    print(f"預測片段數: {len(pred_segments)}")
+    
+    return avg_iou
+
+
+def compute_iou(seg1, seg2):
+    \"\"\"計算兩個片段的IoU\"\"\"
+    start1, end1 = seg1['start'], seg1['end']
+    start2, end2 = seg2['start'], seg2['end']
+    
+    # 交集
+    intersection = max(0, min(end1, end2) - max(start1, start2))
+    
+    # 聯集
+    union = (end1 - start1) + (end2 - start2) - intersection
+    
+    return intersection / union if union > 0 else 0
+```
+
+========================================================================
+## 總結
+========================================================================
+
+這個框架提供了:
+✓ 自動從切好的片段學習切割模式
+✓ 使用深度學習(LSTM)進行序列標註
+✓ 完整的訓練、評估、預測流程
+✓ 可擴展的架構支援多種改進
+
+下一步建議:
+1. 收集更多標註資料(不同人、不同條件)
+2. 嘗試不同模型架構(TCN、Transformer)
+3. 添加更多特徵(關節角度、步態參數)
+4. 實作線上學習(incremental learning)
+
+祝訓練順利! 🚀
+\"\"\"
