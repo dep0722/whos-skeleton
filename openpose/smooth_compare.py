@@ -11,14 +11,14 @@ import numpy as np
 # 使用者設定（你只需要改這裡）
 # =====================================================
 
-INPUT_JSON = r"C:\mydata\sf\open\output_json\1223_D.json"
-INPUT_CSV  = r"C:\mydata\sf\open\output_csv\1223_D.csv"
+INPUT_JSON = r"C:\mydata\sf\open\output_json\1217_3.json"
+INPUT_CSV  = r"C:\mydata\sf\open\output_csv\1217_3.csv"
 
 JSON_ROOT = r"C:\mydata\sf\open\output_json"
 CSV_ROOT  = r"C:\mydata\sf\open\output_csv"
 
-OUTPUT_PREFIX = "1223_D_smooth"
-LABEL = "D"
+OUTPUT_PREFIX = "0102_3_smooth_2"
+LABEL = "3"
 
 NUM_JOINTS = 25
 FPS = 30
@@ -51,6 +51,7 @@ def load_openpose_json_template(path):
 # =====================================================
 
 def load_openpose_csv(path):
+    FRAME_OFFSET = 1
     raw_rows = []
     header = None
 
@@ -60,7 +61,6 @@ def load_openpose_csv(path):
             if not row:
                 continue
 
-            # 判斷 header
             if header is None:
                 try:
                     float(row[0])
@@ -80,16 +80,31 @@ def load_openpose_csv(path):
 
     for t, row in enumerate(raw_rows):
         for j in range(NUM_JOINTS):
-            xs[j, t] = float(row[3*j])
-            ys[j, t] = float(row[3*j + 1])
-            cs[j, t] = float(row[3*j + 2])
+            base = FRAME_OFFSET + 3*j
+            xs[j, t] = float(row[base])
+            ys[j, t] = float(row[base + 1])
+            cs[j, t] = float(row[base + 2])
+
+    # ✅ debug 只印一次
+    print("frame[0:5]:", [raw_rows[i][0] for i in range(5)])
+    print("x0 raw[0:5]:", xs[0, :5])
 
     return xs, ys, cs, header, raw_rows
+
 
 
 # =====================================================
 # 平滑方法
 # =====================================================
+
+def median_filter_1d(x, k=3):
+    assert k % 2 == 1
+    r = k // 2
+    y = x.copy()
+    for i in range(r, len(x) - r):
+        y[i] = np.median(x[i-r:i+r+1])
+    return y
+
 
 def moving_average(x, k):
     kernel = np.ones(2*k + 1) / (2*k + 1)
@@ -113,7 +128,7 @@ def conf_ema(x, c, base_alpha, min_alpha=0.05):
         y[t] = alpha * x[t] + (1 - alpha) * y[t-1]
     return y
 
-
+    
 class OneEuroFilter:
     def __init__(self, freq, min_cutoff, beta, d_cutoff):
         self.freq = freq
@@ -156,26 +171,31 @@ def apply_smoothing(xs, ys, cs, method):
     ys_s = np.zeros_like(ys)
 
     for j in range(J):
+        # ✅ 先去除 1~2 frame spike（這是你現在最需要的）
+        x_clean = median_filter_1d(xs[j], k=3)
+        y_clean = median_filter_1d(ys[j], k=3)
+
         if method == "MA":
-            xs_s[j] = moving_average(xs[j], MA_WINDOW)
-            ys_s[j] = moving_average(ys[j], MA_WINDOW)
+            xs_s[j] = moving_average(x_clean, MA_WINDOW)
+            ys_s[j] = moving_average(y_clean, MA_WINDOW)
 
         elif method == "EMA":
-            xs_s[j] = ema(xs[j], EMA_ALPHA)
-            ys_s[j] = ema(ys[j], EMA_ALPHA)
+            xs_s[j] = ema(x_clean, EMA_ALPHA)
+            ys_s[j] = ema(y_clean, EMA_ALPHA)
 
         elif method == "CONF_EMA":
-            xs_s[j] = conf_ema(xs[j], cs[j], CONF_EMA_BASE_ALPHA)
-            ys_s[j] = conf_ema(ys[j], cs[j], CONF_EMA_BASE_ALPHA)
+            xs_s[j] = conf_ema(x_clean, cs[j], CONF_EMA_BASE_ALPHA)
+            ys_s[j] = conf_ema(y_clean, cs[j], CONF_EMA_BASE_ALPHA)
 
         elif method == "ONE_EURO":
             fx = OneEuroFilter(FPS, ONEEURO_MIN_CUTOFF, ONEEURO_BETA, ONEEURO_D_CUTOFF)
             fy = OneEuroFilter(FPS, ONEEURO_MIN_CUTOFF, ONEEURO_BETA, ONEEURO_D_CUTOFF)
             for t in range(T):
-                xs_s[j, t] = fx.filter(xs[j, t])
-                ys_s[j, t] = fy.filter(ys[j, t])
+                xs_s[j, t] = fx.filter(x_clean[t])
+                ys_s[j, t] = fy.filter(y_clean[t])
 
     return xs_s, ys_s
+
 
 # =====================================================
 # 輸出
@@ -214,11 +234,13 @@ def write_csv(xs, ys, cs, header, raw_rows, out_path, label):
         for t in range(T):
             row = raw_rows[t].copy()
 
-            # 覆寫 x,y,c
+            FRAME_OFFSET = 1
+
             for j in range(NUM_JOINTS):
-                row[3*j]     = xs[j, t]
-                row[3*j + 1] = ys[j, t]
-                row[3*j + 2] = cs[j, t]
+                base = FRAME_OFFSET + 3*j
+                row[base]     = f"{xs[j, t]:.6f}"
+                row[base + 1] = f"{ys[j, t]:.6f}"
+                row[base + 2] = f"{cs[j, t]:.6f}"
 
             # label 欄位處理
             if header is not None and "label" in header:

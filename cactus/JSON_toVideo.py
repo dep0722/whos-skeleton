@@ -53,9 +53,9 @@ def draw_keypoints(img, points, radius=4):
 
 
 # ================= 設定 =================
-json_path = r"C:\mydata\sf\open\output_json\1217_3.json"
-video_path = r"C:\mydata\sf\open\walking_video\1217_3.mp4"
-output_video = r"C:\mydata\sf\open\output_video\1217_3_2.mp4"
+json_path = r"C:\mydata\sf\open\output_json\0128\H\0128_H_2.json"
+video_path = r"C:\mydata\sf\open\walking_video\0128\0128_H_2.mp4"
+output_video = r"C:\mydata\sf\open\output_video\0227_H_2.mp4"
 
 num_keypoints = 25  # BODY_25
 conf_threshold = 0.3

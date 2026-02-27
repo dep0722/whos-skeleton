@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # =========================
 INPUT_CSV  = r"C:\mydata\sf\open\output_csv\1223_3_18.csv"        # <-- change to your CSV path
 OUTPUT_DIR = r"C:\mydata\sf\open\output_images"     # <-- change output directory
-NUM_JOINTS = 25
+NUM_JOINTS = 18
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -20,7 +20,15 @@ t = df["frame_index"].values
 # =========================
 # Detect joints
 # =========================
-joint_names = [c[:-2] for c in df.columns if c.endswith("_x")]
+joint_names = [
+    "Nose", "Neck",
+    "RShoulder", "RElbow", "RWrist",
+    "LShoulder", "LElbow", "LWrist",
+    "RHip", "RKnee", "RAnkle",
+    "LHip", "LKnee", "LAnkle",
+    "REye", "LEye", "REar", "LEar"
+]
+
 joint_names.sort()
 
 assert len(joint_names) == NUM_JOINTS

@@ -18,9 +18,9 @@ import pandas as pd
 import os
 
 # -------- 參數：把這裡改成你的影像檔路徑 ----------
-image_path = "C:/mydata/sf/conda/1025_test/p1105test/A/IMG_20251105_183514_0001.jpg"   # <-- 改成你的圖片檔名或完整路徑
-output_csv = "C:/mydata/sf/conda/1025_test/pose_landmarks.csv"
-output_annotated = "C:/mydata/sf/conda/1025_test/annotated_pose.jpg"
+image_path = r"C:\mydata\sf\ppt\S__75546628.jpg"   # <-- 改成你的圖片檔名或完整路徑
+output_csv = r"C:/mydata/sf/conda/1025_test/1228_1.csv"
+output_annotated = r"C:\mydata\sf\conda\1025_test\test_photo\1228_1.jpg"
 # --------------------------------------------------
 
 mp_pose = mp.solutions.pose

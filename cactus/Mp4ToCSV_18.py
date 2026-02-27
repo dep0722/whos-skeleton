@@ -1,8 +1,6 @@
 '''
-cactus.Mp4ToCSV 的 Docstring
-註解詳見：12/17 關於重製版生成 JSON&CSV
-反正大意就是 mp4 轉成 CSV，然後整個影片的 JSON 是順便存的，作為記錄用途
-
+Mp4 to CSV&JSON
+Body18 的版本
 '''
 
 import os
@@ -16,16 +14,16 @@ import numpy as np
 # Path configuration
 # -----------------------------
 OPENPOSE_EXE = r"C:/mydata/sf/openpose/bin/OpenPoseDemo.exe"
-VIDEO_PATH  = r"C:\mydata\sf\open\walking_video\1223_B.mp4"
-name = "1223_B"
+VIDEO_PATH  = r"C:\mydata\sf\open\walking_video\1217_3.mp4"
+name = "1223_3"
 TMP_JSON_DIR = r"C:/mydata/sf/cactus/TempJson"
-MERGED_JSON  = r"C:/mydata/sf/open/output_json/"+name+".json"
-CSV_OUTPUT   = r"C:/mydata/sf/open/output_csv/"+name+".csv"
+MERGED_JSON  = r"C:/mydata/sf/open/output_json/" + name + "_18.json"
+CSV_OUTPUT   = r"C:/mydata/sf/open/output_csv/" + name + "_18.csv"
 
 os.makedirs(TMP_JSON_DIR, exist_ok=True)
 
 # -----------------------------
-# Step 1: Run OpenPose (.exe)
+# Step 1: Run OpenPose (BODY_18)
 # -----------------------------
 subprocess.run(
     [
@@ -34,8 +32,9 @@ subprocess.run(
         "--write_json", TMP_JSON_DIR,
         "--display", "0",
         "--render_pose", "0",
-        "--model_pose", "BODY_25"
-    ],cwd=r"C:/mydata/sf/openpose",
+        "--model_pose", "COCO"
+    ],
+    cwd=r"C:/mydata/sf/openpose",
     check=True
 )
 
@@ -52,7 +51,6 @@ for frame_index, jf in enumerate(frame_files):
     with open(jf, "r", encoding="utf-8") as f:
         frame_data = json.load(f)
 
-    # 保留 OpenPose 原始格式，只新增 frame_index
     frame_data["frame_index"] = frame_index
     merged_frames.append(frame_data)
 
@@ -69,7 +67,7 @@ with open(MERGED_JSON, "r", encoding="utf-8") as f:
 
 frames = sorted(frames, key=lambda x: x["frame_index"])
 
-NUM_JOINTS = 25  # BODY_25
+NUM_JOINTS = 18  # BODY_18
 pose_sequence = []
 
 for frame in frames:
@@ -83,21 +81,20 @@ for frame in frames:
     kp = np.array(keypoints).reshape(NUM_JOINTS, 3)
     pose_sequence.append(kp)
 
-pose_sequence = np.stack(pose_sequence)  # (T, 25, 3)
+pose_sequence = np.stack(pose_sequence)  # (T, 18, 3)
 
 print("[OK] pose_sequence shape:", pose_sequence.shape)
 
 # -----------------------------
-# Step 4: Export CSV (T x features)
+# Step 4: Export CSV
 # -----------------------------
 JOINT_NAMES = [
-    "Nose","Neck","RShoulder","RElbow","RWrist",
-    "LShoulder","LElbow","LWrist","MidHip",
-    "RHip","RKnee","RAnkle",
-    "LHip","LKnee","LAnkle",
-    "REye","LEye","REar","LEar",
-    "LBigToe","LSmallToe","LHeel",
-    "RBigToe","RSmallToe","RHeel"
+    "Nose", "Neck",
+    "RShoulder", "RElbow", "RWrist",
+    "LShoulder", "LElbow", "LWrist",
+    "RHip", "RKnee", "RAnkle",
+    "LHip", "LKnee", "LAnkle",
+    "REye", "LEye", "REar", "LEar"
 ]
 
 COORDS = ["x", "y", "score"]
@@ -107,14 +104,12 @@ T = pose_sequence.shape[0]
 with open(CSV_OUTPUT, "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
 
-    # Header
     header = ["frame_index"]
     for joint in JOINT_NAMES:
         for c in COORDS:
             header.append(f"{joint}_{c}")
     writer.writerow(header)
 
-    # Rows: one frame per row
     for t in range(T):
         row = [t]
         for j in range(NUM_JOINTS):
@@ -124,7 +119,7 @@ with open(CSV_OUTPUT, "w", newline="", encoding="utf-8") as f:
 print(f"[OK] CSV 輸出完成：{CSV_OUTPUT}")
 
 # -----------------------------
-# Step 5: Clean TEMP JSON files
+# Step 5: Clean TEMP JSON
 # -----------------------------
 for jf in glob.glob(os.path.join(TMP_JSON_DIR, "*.json")):
     try:
@@ -132,7 +127,6 @@ for jf in glob.glob(os.path.join(TMP_JSON_DIR, "*.json")):
     except Exception as e:
         print(f"[WARN] 無法刪除 {jf}: {e}")
 
-# 若資料夾為空，刪除資料夾
 try:
     os.rmdir(TMP_JSON_DIR)
 except OSError:
